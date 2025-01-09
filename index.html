@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Криптографически безопасный генератор и менеджер паролей</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f7f7f7;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+    }
+
+    input[type="number"] {
+      width: 70px;
+      margin-left: 5px;
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      margin: 5px 0;
+    }
+
+    .checkbox-container input {
+      margin-right: 8px;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 10px 15px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 4px;
+      border: none;
+      background: #3498db;
+      color: #fff;
+    }
+
+    button:hover {
+      background: #1d7bb8;
+    }
+
+    .output-container {
+      margin-top: 20px;
+    }
+
+    .password-display {
+      font-weight: bold;
+      font-size: 18px;
+      margin: 10px 0;
+      word-wrap: break-word;
+    }
+
+    .saved-passwords {
+      margin-top: 30px;
+    }
+
+    .password-item {
+      background: #fafafa;
+      padding: 10px;
+      margin-bottom: 5px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap; /* чтобы красиво переносилось на маленьких экранах */
+    }
+
+    .service-name {
+      font-weight: bold;
+      margin-right: 10px;
+      white-space: nowrap;
+    }
+
+    .copy-btn {
+      background: #2ecc71;
+      border: none;
+      color: #fff;
+      padding: 5px 8px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .copy-btn:hover {
+      background: #27ae60;
+    }
+
+  </style>
+</head>
+<body>
+  <h1>Криптографически безопасный генератор и менеджер паролей</h1>
+  <div class="container">
+    <div>
+      <!-- Поле ввода названия сервиса -->
+      <label for="serviceName">Название сервиса:</label>
+      <input type="text" id="serviceName" placeholder="Например: Google, GitHub" />
+
+      <label>
+        Длина пароля:
+        <input type="number" id="passwordLength" min="4" max="128" value="12" />
+      </label>
+
+      <div class="checkbox-container">
+        <input type="checkbox" id="useLowercase" checked />
+        <label for="useLowercase">Строчные буквы (a-z)</label>
+      </div>
+
+      <div class="checkbox-container">
+        <input type="checkbox" id="useUppercase" checked />
+        <label for="useUppercase">Прописные буквы (A-Z)</label>
+      </div>
+
+      <div class="checkbox-container">
+        <input type="checkbox" id="useNumbers" checked />
+        <label for="useNumbers">Цифры (0-9)</label>
+      </div>
+
+      <div class="checkbox-container">
+        <input type="checkbox" id="useSymbols" checked />
+        <label for="useSymbols">Символы (!@#...)</label>
+      </div>
+
+      <button id="generateBtn">Сгенерировать пароль</button>
+
+      <div class="output-container">
+        <div id="generatedPassword" class="password-display"></div>
+        <button id="saveBtn" style="display: none;">Сохранить пароль</button>
+      </div>
+    </div>
+
+    <div class="saved-passwords">
+      <h3>Сохранённые пароли:</h3>
+      <div id="savedPasswordsList"></div>
+    </div>
+  </div>
+
+  <script>
+    // Элементы со страницы
+    const serviceNameInput    = document.getElementById('serviceName');
+    const passwordLengthInput = document.getElementById('passwordLength');
+    const useLowercaseInput   = document.getElementById('useLowercase');
+    const useUppercaseInput   = document.getElementById('useUppercase');
+    const useNumbersInput     = document.getElementById('useNumbers');
+    const useSymbolsInput     = document.getElementById('useSymbols');
+
+    const generateBtn         = document.getElementById('generateBtn');
+    const saveBtn             = document.getElementById('saveBtn');
+    const generatedPasswordEl = document.getElementById('generatedPassword');
+    const savedPasswordsList  = document.getElementById('savedPasswordsList');
+
+    // Функция генерации пароля (криптографически безопасным способом)
+    function generatePassword() {
+      const length       = parseInt(passwordLengthInput.value, 10);
+      const useLowercase = useLowercaseInput.checked;
+      const useUppercase = useUppercaseInput.checked;
+      const useNumbers   = useNumbersInput.checked;
+      const useSymbols   = useSymbolsInput.checked;
+
+      const lowercaseChars = 'abcdefghijklmnopqrstuvwxyz';
+      const uppercaseChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const numberChars    = '0123456789';
+      const symbolChars    = '!@#$%^&*()_+~`|}{[]:;?><,./-=';
+      
+      let validChars = '';
+      if (useLowercase) validChars += lowercaseChars;
+      if (useUppercase) validChars += uppercaseChars;
+      if (useNumbers)   validChars += numberChars;
+      if (useSymbols)   validChars += symbolChars;
+
+      // Если не выбрано ни одной опции
+      if (!validChars) {
+        return 'Выберите хотя бы один тип символов!';
+      }
+
+      // Создаём массив криптографически случайных байт
+      const randomValues = new Uint8Array(length);
+      window.crypto.getRandomValues(randomValues);
+
+      // Генерируем пароль
+      let password = '';
+      for (let i = 0; i < length; i++) {
+        password += validChars[randomValues[i] % validChars.length];
+      }
+
+      return password;
+    }
+
+    // Сохранение пароля в Local Storage
+    function savePassword(service, password) {
+      // Читаем ранее сохранённые пароли (массив объектов)
+      let savedData = JSON.parse(localStorage.getItem('savedPasswords')) || [];
+      
+      // Добавляем новый объект
+      savedData.push({ service, password });
+
+      // Сохраняем обратно
+      localStorage.setItem('savedPasswords', JSON.stringify(savedData));
+
+      // Обновляем список на экране
+      renderSavedPasswords();
+    }
+
+    // Отображение сохранённых паролей
+    function renderSavedPasswords() {
+      const savedData = JSON.parse(localStorage.getItem('savedPasswords')) || [];
+      savedPasswordsList.innerHTML = '';
+
+      savedData.forEach((item, index) => {
+        const div  = document.createElement('div');
+        div.className = 'password-item';
+
+        // Название сервиса
+        const serviceSpan = document.createElement('span');
+        serviceSpan.className = 'service-name';
+        serviceSpan.innerText = item.service + ':';
+
+        // Сам пароль
+        const pwdSpan = document.createElement('span');
+        pwdSpan.innerText = item.password;
+
+        // Кнопка "Копировать"
+        const copyBtn = document.createElement('button');
+        copyBtn.innerText = 'Копировать';
+        copyBtn.className = 'copy-btn';
+        copyBtn.addEventListener('click', () => {
+          navigator.clipboard.writeText(item.password);
+          alert('Пароль скопирован в буфер обмена!');
+        });
+
+        // Кнопка "Удалить"
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerText = 'Удалить';
+        deleteBtn.className = 'copy-btn';
+        deleteBtn.style.marginLeft = '10px';
+        deleteBtn.addEventListener('click', () => {
+          removePassword(index);
+        });
+
+        div.appendChild(serviceSpan);
+        div.appendChild(pwdSpan);
+        div.appendChild(copyBtn);
+        div.appendChild(deleteBtn);
+        savedPasswordsList.appendChild(div);
+      });
+    }
+
+    // Удаление пароля из списка
+    function removePassword(index) {
+      let savedData = JSON.parse(localStorage.getItem('savedPasswords')) || [];
+      savedData.splice(index, 1);
+      localStorage.setItem('savedPasswords', JSON.stringify(savedData));
+      renderSavedPasswords();
+    }
+
+    // Обработчик кнопки "Сгенерировать"
+    generateBtn.addEventListener('click', () => {
+      const newPassword = generatePassword();
+      generatedPasswordEl.textContent = newPassword;
+
+      // Если получилось сообщение "Выберите хотя бы один тип символов!",
+      // то скрываем кнопку "Сохранить", иначе показываем.
+      if (!newPassword.startsWith('Выберите')) {
+        saveBtn.style.display = 'inline-block';
+      } else {
+        saveBtn.style.display = 'none';
+      }
+    });
+
+    // Обработчик кнопки "Сохранить"
+    saveBtn.addEventListener('click', () => {
+      const service = serviceNameInput.value.trim();
+      const password = generatedPasswordEl.textContent;
+
+      // Если пароль не содержит текст "Выберите..." и есть название сервиса
+      if (!password.startsWith('Выберите') && service) {
+        savePassword(service, password);
+        alert(`Пароль для сервиса "${service}" сохранён!`);
+
+        // Сбрасываем поле ввода названия сервиса
+        serviceNameInput.value = '';
+        // Убираем кнопку "Сохранить" до следующего генерации
+        saveBtn.style.display = 'none';
+      } else if (!service) {
+        alert('Введите название сервиса, чтобы сохранить пароль!');
+      }
+    });
+
+    // При загрузке страницы отрисовать сохранённые пароли
+    renderSavedPasswords();
+  </script>
+</body>
+</html>
